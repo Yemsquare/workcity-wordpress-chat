@@ -52,87 +52,85 @@ It uses a **React (wp-element) frontend**, **custom REST API endpoints**, and a 
 All routes are under `/wp-json/workcity/v1/` and require authentication.
 
 ### Sessions
-- `POST /start-chat`
+- **POST** `/start-chat`
   ```json
   { "product_id": 123 }
   → { "session_id": 45 }
+  ```
 
-`POST /send-message`
-```json
-{ "session_id": 45, "message": "Hello" }
+### Messages
+- **POST** `/send-message`
+  ```json
+  { "session_id": 45, "message": "Hello" }
+  ```
 
-with an attachment 
-```json
-{ "session_id": 45, "attachment_id": 99 }
+- With an attachment:
+  ```json
+  { "session_id": 45, "attachment_id": 99 }
+  ```
 
-- `GET /get-messages?session_id=45&since_id=0`
-Returns message history. Use `since_id` for incremental updates.
+- **GET** `/get-messages?session_id=45&since_id=0`  
+  Returns message history. Use `since_id` for incremental updates.
 
-`POST /mark-read`
-```json
-{ "session_id": 45 }
+- **POST** `/mark-read`
+  ```json
+  { "session_id": 45 }
+  ```
 
-File Uploads
+### File Uploads
+- **POST** `/upload?session_id=45`  
+  Multipart form-data: `file=@/path/to/file.png`  
+  → Returns `attachment_id` and `url`.
 
-`POST /upload?session_id=45`
-Multipart form-data: file=@/path/to/file.png
-→ Returns attachment_id and url.
+### Presence / Typing
+- **POST** `/typing`
+  ```json
+  { "session_id": 45, "is_typing": true }
+  ```
 
-Presence / Typing
+- **GET** `/presence?session_id=45`  
+  → Returns participants with typing state.
 
-`POST /typing`
-```json
-{ "session_id": 45, "is_typing": true }
+---
 
-`GET /presence?session_id=45`    
-→ Returns participants with typing state.
+## 🛠️ Technical Details
 
-🛠️ Technical Details
-Frontend
+### Frontend
+- Built with **WordPress’s built-in React (`wp-element`)**.
+- Main code: `assets/js/chat-app.js`.
+- Styles: `assets/css/chat.css` (supports dark/light mode).
 
-Built with WordPress’s built-in React (wp-element).
+### Database
+- Messages are stored in:
+  ```
+  wp_workcity_chat_messages
+  ```
+- Table is created automatically on plugin activation.
 
-Main code: assets/js/chat-app.js.
+### Permissions
+- Allowed roles:
+  - **Author (buyer)**
+  - **Participants** (set via `chat_session` meta box in wp-admin)
+  - **Shop manager / Admin**
+- Permissions handled by `check_session_permission()` in `class-rest.php`.
 
-Styles: assets/css/chat.css (supports dark/light mode).
+### Participants
+- Stored as post meta `_workcity_chat_participants` (array of user IDs).
+- Editable in wp-admin via a custom meta box.
 
-Database
+---
 
-Messages are stored in:
-`wp_workcity_chat_messages`
+## 🔮 Future Improvements
 
-Table is created automatically on plugin activation.
+- **WebSockets**: Replace polling with WebSockets for instant updates.
+- **Per-user read receipts**: Track read status per participant.
+- **Push/email notifications**: Notify users when new messages arrive.
+- **Enhanced UI**: Add avatars, product thumbnails, chat list view.
+- **Participant assignment UI**: Dropdowns for merchants, designers, and agents.
+- **Scalability**: Integrate Redis or an external service (e.g., Pusher/Ably).
 
-Permissions
+---
 
-Allowed roles:
+## 📜 License
 
-Author (buyer)
-
-Participants (set via `chat_session` meta box in wp-admin)
-
-Shop manager / Admin
-
-Permissions handled by `check_session_permission()` in `class-rest.php`.
-
-Participants
-
-Stored as post meta `_workcity_chat_participants` (array of user IDs).
-
-Editable in wp-admin via a custom meta box.
-
-🔮 Future Improvements
-
-WebSockets: Replace polling with WebSockets for instant updates.
-
-Per-user read receipts: Track read status per participant.
-
-Push/email notifications: Notify users when new messages arrive.
-
-Enhanced UI: Add avatars, product thumbnails, chat list view.
-
-Participant assignment UI: Dropdowns for merchants, designers, and agents.
-
-Scalability: Integrate Redis or an external service (e.g., Pusher/Ably).
-
-
+GPL v2 or later.
