@@ -32,23 +32,42 @@ class Workcity_Chat_REST {
             'callback' => [__CLASS__, 'upload_file'],
             'permission_callback' => [__CLASS__, 'check_session_permission']
         ]);
+
+        register_rest_route('workcity/v1', '/typing', [
+            'methods'  => 'POST',
+            'callback' => [__CLASS__, 'typing'],
+            'permission_callback' => [__CLASS__, 'check_session_permission']
+        ]);
+
+        register_rest_route('workcity/v1', '/presence', [
+            'methods'  => 'GET',
+            'callback' => [__CLASS__, 'presence'],
+            'permission_callback' => [__CLASS__, 'check_session_permission']
+        ]);
     }
 
-    public static function check_session_permission( WP_REST_Request $request ) {
-        if ( ! is_user_logged_in() ) return false;
-        $session_id = intval( $request->get_param('session_id') );
-        if ( ! $session_id ) return true; // allow if not tied to a session (e.g. upload pre-check)
-        $post = get_post($session_id);
-        if ( ! $post || $post->post_type !== 'chat_session' ) return false;
-        $user_id = get_current_user_id();
+  public static function check_session_permission( WP_REST_Request $request ) {
+    if ( ! is_user_logged_in() ) return false;
+    $session_id = intval( $request->get_param('session_id') );
+    if ( ! $session_id ) return true;
 
-        // Author or shop manager/admin (manage_woocommerce) has access.
-        if ( intval($post->post_author) === $user_id || current_user_can('manage_woocommerce') ) {
-            return true;
-        }
-        // TODO: extend to designers/agents/merchants via participants meta.
-        return false;
+    $post = get_post($session_id);
+    if ( ! $post || $post->post_type !== 'chat_session' ) return false;
+    $user_id = get_current_user_id();
+
+    // Author or WooCommerce managers
+    if ( intval($post->post_author) === $user_id || current_user_can('manage_woocommerce') ) {
+        return true;
     }
+
+    // Additional participants
+    $participants = get_post_meta($session_id, '_workcity_chat_participants', true);
+    if ( is_array($participants) && in_array($user_id, $participants) ) {
+        return true;
+    }
+
+    return false;
+}
 
     public static function start_chat( WP_REST_Request $request ) {
         $product_id  = intval( $request->get_param('product_id') );
@@ -171,5 +190,31 @@ class Workcity_Chat_REST {
         wp_update_attachment_metadata($attach_id, $attach_data);
 
         return new WP_REST_Response(['attachment_id' => $attach_id, 'url' => wp_get_attachment_url($attach_id)], 201);
+    }
+
+    public static function typing( WP_REST_Request $request ) {
+        $session_id = intval($request->get_param('session_id'));
+        $is_typing  = (bool) $request->get_param('is_typing');
+        $user_id    = get_current_user_id();
+        set_transient("wc_chat_typing_{$session_id}_{$user_id}", $is_typing ? 1 : 0, 20);
+        return ['status' => 'ok'];
+    }
+
+    public static function presence( WP_REST_Request $request ) {
+        $session_id = intval($request->get_param('session_id'));
+        $participants = get_post_meta($session_id, '_workcity_chat_participants', true);
+        $participants[] = get_post_field('post_author', $session_id);
+
+        $status = [];
+        foreach ($participants as $uid) {
+            $typing = get_transient("wc_chat_typing_{$session_id}_{$uid}") ? true : false;
+            $user   = get_user_by('id', $uid);
+            $status[] = [
+                'id'     => $uid,
+                'name'   => $user ? $user->display_name : "User $uid",
+                'typing' => $typing
+            ];
+        }
+        return ['participants' => $status];
     }
 }

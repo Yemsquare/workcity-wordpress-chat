@@ -17,10 +17,12 @@
     const [sinceId, setSinceId] = useState(0);
     const [file, setFile] = useState(null);
     const [dark, setDark] = useState(localStorage.getItem('wcChatDark') === '1');
+    const [presence, setPresence] = useState([]);
 
     const rootEl = document.getElementById('workcity-chat-root');
     const productId = rootEl ? parseInt(rootEl.getAttribute('data-product-id') || '0', 10) : 0;
 
+    // Start chat session
     useEffect(() => {
       if (!WORKCITY_CHAT.isLoggedIn) return;
       apiFetch('start-chat', {
@@ -32,6 +34,7 @@
       });
     }, []);
 
+    // Poll for messages
     useEffect(() => {
       if (!sessionId) return;
       const interval = setInterval(() => {
@@ -47,6 +50,19 @@
       return () => clearInterval(interval);
     }, [sessionId, sinceId]);
 
+    // Poll for presence (typing)
+    useEffect(() => {
+      if (!sessionId) return;
+      const interval = setInterval(() => {
+        apiFetch(`presence?session_id=${sessionId}`)
+          .then(data => {
+            if (data && data.participants) setPresence(data.participants);
+          });
+      }, 3000);
+      return () => clearInterval(interval);
+    }, [sessionId]);
+
+    // Send message / file
     function send() {
       if (!input.trim() && !file) return;
 
@@ -81,6 +97,18 @@
       }
     }
 
+    // Input typing handler
+    function onInputChange(e) {
+      setInput(e.target.value);
+      if (!sessionId) return;
+      apiFetch('typing', {
+        method: 'POST',
+        body: JSON.stringify({ session_id: sessionId, is_typing: e.target.value.length > 0 }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Dark mode toggle
     function toggleDark() {
       const next = !dark;
       setDark(next);
@@ -101,8 +129,12 @@
           h('div', { className: 'wc-chat-bubble', dangerouslySetInnerHTML: { __html: m.message } })
         ))
       ),
+      h('div', { className: 'wc-chat-typing' },
+        presence.filter(p => p.id !== WORKCITY_CHAT.user.id && p.typing)
+                .map(p => h('div', { key: p.id }, `${p.name} is typing...`))
+      ),
       h('div', { className: 'wc-chat-input' },
-        h('input', { value: input, onChange: e => setInput(e.target.value), placeholder: 'Type a message...' }),
+        h('input', { type: 'text', value: input, onChange: onInputChange, placeholder: 'Type a message...' }),
         h('input', { type: 'file', onChange: e => setFile(e.target.files[0]) }),
         h('button', { onClick: send }, 'Send')
       )

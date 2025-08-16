@@ -56,3 +56,10 @@
   border-radius: 8px;
   cursor: pointer;
 }
+.wc-chat-typing {
+  padding: 6px 12px;
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+.wc-chat-card.dark .wc-chat-typing { color: #d1d5db; }
