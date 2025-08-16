@@ -21,9 +21,9 @@ defined( 'WORKCITY_CHAT_VERSION' ) or define( 'WORKCITY_CHAT_VERSION', '1.0.0' )
 defined( 'WORKCITY_CHAT_PLUGIN_DIR' ) or define( 'WORKCITY_CHAT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 defined( 'WORKCITY_CHAT_PLUGIN_URL' ) or define( 'WORKCITY_CHAT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
-require_once WORKCITY_CHAT_PLUGIN_DIR . 'includes/class-workcity-chat-plugin.php';
-require_once WORKCITY_CHAT_PLUGIN_DIR . 'includes/class-workcity-chat-cpt.php';
-require_once WORKCITY_CHAT_PLUGIN_DIR . 'includes/class-workcity-chat-rest.php';
+require_once WORKCITY_CHAT_PLUGIN_DIR . 'includes/class-activator.php';
+require_once WORKCITY_CHAT_PLUGIN_DIR . 'includes/class-metabox.php';
+require_once WORKCITY_CHAT_PLUGIN_DIR . 'includes/class-rest.php';
 
 
 
